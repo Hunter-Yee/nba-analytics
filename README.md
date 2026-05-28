@@ -1,1 +1,2 @@
-Run: source .venv/bin/activate
+Run at root:
+source .venv/bin/activate
