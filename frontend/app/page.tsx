@@ -89,22 +89,48 @@ export default function HomePage() {
         is_overtime: play.period > 4 ? 1 : 0,
       }))
  
-      // 3. Get all win probabilities in one request
-      const predictions = await fetchWinProbabilityBatch(batchPayload)
+      // 3. Get all win probabilities in one request.
+      // If the ML endpoint is down or errors, fall back to 0.5 for all plays
+      // so the chart still renders — don't let one failing endpoint block the UI.
+      let predictions: { home_win_probability: number; away_win_probability: number }[] = []
+      let probError: string | null = null
+      try {
+        predictions = await fetchWinProbabilityBatch(batchPayload)
+      } catch (err: any) {
+        probError = err.message
+        // Fall back: flat 50/50 so chart shows play-by-play with no model data
+        predictions = detail.plays.map(() => ({
+          home_win_probability: 0.5,
+          away_win_probability: 0.5,
+        }))
+      }
  
       // 4. Merge plays + predictions into chart data
-      const chart: ChartDataPoint[] = detail.plays.map((play, i) => ({
-        play_index: i,
-        seconds_remaining: play.seconds_remaining,
-        home_win_probability: predictions[i]?.home_win_probability ?? 0.5,
-        away_win_probability: predictions[i]?.away_win_probability ?? 0.5,
-        description: play.description,
-        score_home: play.score_home,
-        score_away: play.score_away,
-        period: play.period,
-      }))
+      const chart: ChartDataPoint[] = detail.plays.map((play, i) => {
+        const isLastPlay = i === detail.plays.length - 1;
+        
+        return {
+          play_index: i,
+          seconds_remaining: play.seconds_remaining,
+          // Force 100% / 0% on the final play based on the actual outcome
+          home_win_probability: isLastPlay 
+            ? (detail.home_win ? 1 : 0) 
+            : (predictions[i]?.home_win_probability ?? 0.5),
+          away_win_probability: isLastPlay 
+            ? (detail.home_win ? 0 : 1) 
+            : (predictions[i]?.away_win_probability ?? 0.5),
+          description: play.description,
+          score_home: play.score_home,
+          score_away: play.score_away,
+          period: play.period,
+        };
+      })
  
       setChartData(chart)
+      // Surface the model error as a non-blocking warning (reuse gameError for now)
+      if (probError) {
+        setGameError(`Win probability model unavailable (${probError}) — showing 50/50 baseline`)
+      }
       setGameLoading(false)
     } catch (err: any) {
       setGameError(err.message)
@@ -169,44 +195,44 @@ export default function HomePage() {
  
   // ─── Render ──────────────────────────────────────────────────────────────────
   return (
-    <main className="min-h-screen bg-[#080a0e] text-white">
+    <main className="h-screen bg-[#080a0e] text-white flex flex-col overflow-hidden">
       {/* Top nav bar */}
-      <header className="border-b border-[#2a2d3e] px-6 py-4 flex items-center justify-between">
+      <header className="border-b border-[#1e2130] px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-2.5 h-2.5 rounded-full bg-[#f97316] shadow-lg shadow-orange-500/50" />
-          <span className="font-mono text-base font-bold tracking-widest text-white uppercase">
+          <div className="w-2 h-2 rounded-full bg-[#f97316] shadow-lg shadow-orange-500/50" />
+          <span className="font-mono text-sm font-bold tracking-widest text-white uppercase">
             NBA Live Analytics
           </span>
-          <span className="text-[#6b7280] font-mono text-sm">/ Historical Replay</span>
+          <span className="text-[#2a2d36] font-mono text-xs">/ Historical Replay</span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           {gameLoading && (
             <div className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-[#f97316] animate-ping" />
-              <span className="text-[#f97316] font-mono text-sm">Loading game…</span>
+              <span className="text-[#f97316] font-mono text-xs">Loading game…</span>
             </div>
           )}
-          <span className="text-[#9ca3af] font-mono text-sm">
+          <span className="text-[#374151] font-mono text-xs">
             {games.length} games
           </span>
         </div>
       </header>
  
-      <div className="px-4 md:px-6 py-4 space-y-4 max-w-screen-2xl mx-auto">
+      <div className="px-4 md:px-6 py-4 flex flex-col flex-1 min-h-0 w-full max-w-screen-2xl mx-auto gap-4">
         {/* Error states */}
         {gamesError && (
-          <div className="bg-red-950/30 border border-red-800 rounded-lg px-4 py-3">
+          <div className="bg-red-950/30 border border-red-900 rounded-lg px-4 py-3">
             <span className="text-red-400 font-mono text-sm">
               ⚠ Could not load games: {gamesError}
             </span>
-            <span className="text-red-500 font-mono text-xs ml-2">
+            <span className="text-red-600 font-mono text-xs ml-2">
               Is the backend running? (uvicorn main:app --port 8000)
             </span>
           </div>
         )}
  
         {gameError && (
-          <div className="bg-red-950/30 border border-red-800 rounded-lg px-4 py-3">
+          <div className="bg-red-950/30 border border-red-900 rounded-lg px-4 py-3">
             <span className="text-red-400 font-mono text-sm">
               ⚠ Game load failed: {gameError}
             </span>
@@ -241,6 +267,21 @@ export default function HomePage() {
             />
           </div>
         </div>
+
+        {/* NEW: Replay Controls directly under the chart */}
+        <div className="py-2">
+          <ReplayControls
+            isPlaying={isPlaying}
+            speed={speed}
+            currentPlayIndex={currentPlayIndex}
+            totalPlays={gameDetail?.plays.length ?? 0}
+            onPlayPause={handlePlayPause}
+            onSpeedChange={handleSpeedChange}
+            onScrub={handleScrub}
+            onSkipToStart={handleSkipToStart}
+            onSkipToEnd={handleSkipToEnd}
+          />
+        </div>
  
         {/* Row 3: Momentum Bar */}
         <MomentumBar
@@ -249,8 +290,8 @@ export default function HomePage() {
           awayTeam={gameDetail?.away_team ?? 'AWAY'}
         />
  
-        {/* Row 4: Play Feed + Replay Controls */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{ minHeight: 340 }}>
+        {/* Row 4: Play Feed + Info Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 min-h-0">
           <PlayFeed
             plays={gameDetail?.plays ?? []}
             currentPlayIndex={currentPlayIndex}
@@ -258,7 +299,7 @@ export default function HomePage() {
             awayTeam={gameDetail?.away_team ?? 'AWAY'}
           />
           <div className="flex flex-col gap-4">
-            <ReplayControls
+            {/* <ReplayControls
               isPlaying={isPlaying}
               speed={speed}
               currentPlayIndex={currentPlayIndex}
@@ -268,39 +309,34 @@ export default function HomePage() {
               onScrub={handleScrub}
               onSkipToStart={handleSkipToStart}
               onSkipToEnd={handleSkipToEnd}
-            />
+            /> */}
  
             {/* Instructions card — shown when no game selected */}
             {!gameDetail && !gameLoading && (
-              <div className="bg-[#0f1117] border border-[#2a2d3e] rounded-xl p-5 flex-1">
-                <div className="text-[#9ca3af] font-mono text-xs mb-4 tracking-widest uppercase font-semibold">
+              <div className="bg-[#0f1117] border border-[#1e2130] rounded-xl p-5 flex-1">
+                <div className="text-[#374151] font-mono text-xs mb-3 tracking-widest uppercase">
                   How to use
                 </div>
-                <div className="space-y-2.5 text-[#d1d5db] font-mono text-sm leading-relaxed">
+                <div className="space-y-2 text-[#4b5563] font-mono text-xs leading-relaxed">
                   <div>1. Select a game from the dropdown above</div>
                   <div>2. Wait for plays + win probability to load</div>
                   <div>3. Press ▶ to watch the game replay</div>
                   <div>4. Use the scrubber to jump to any moment</div>
                   <div>5. Change speed to 0.5x / 1x / 2x / 4x</div>
                 </div>
-                <div className="mt-5 pt-4 border-t border-[#2a2d3e]">
-                  <div className="text-[#9ca3af] font-mono text-xs leading-loose space-y-1">
+                <div className="mt-4 pt-3 border-t border-[#1e2130]">
+                  <div className="text-[#2a2d36] font-mono text-[10px] leading-loose">
                     <div>
-                      <span className="text-emerald-400">■</span>{' '}
-                      <span className="text-[#d1d5db]">Made shot</span>
+                      <span className="text-emerald-500">■</span> Made shot
                       &nbsp;&nbsp;
-                      <span className="text-red-400">■</span>{' '}
-                      <span className="text-[#d1d5db]">Turnover</span>
+                      <span className="text-red-500">■</span> Turnover
                       &nbsp;&nbsp;
-                      <span className="text-yellow-400">■</span>{' '}
-                      <span className="text-[#d1d5db]">Foul</span>
+                      <span className="text-yellow-500">■</span> Foul
                     </div>
                     <div>
-                      <span className="text-teal-400">■</span>{' '}
-                      <span className="text-[#d1d5db]">Free throw</span>
+                      <span className="text-teal-400">■</span> Free throw
                       &nbsp;&nbsp;
-                      <span className="text-purple-400">■</span>{' '}
-                      <span className="text-[#d1d5db]">Rebound</span>
+                      <span className="text-purple-400">■</span> Rebound
                     </div>
                   </div>
                 </div>
@@ -309,40 +345,40 @@ export default function HomePage() {
  
             {/* Game stats summary — shown when game is finished */}
             {gameDetail && isFinished && (
-              <div className="bg-[#0f1117] border border-[#2a2d3e] rounded-xl p-5 flex-1">
-                <div className="text-[#9ca3af] font-mono text-xs mb-4 tracking-widest uppercase font-semibold">
+              <div className="bg-[#0f1117] border border-[#1e2130] rounded-xl p-5 flex-1">
+                <div className="text-[#374151] font-mono text-xs mb-3 tracking-widest uppercase">
                   Final Result
                 </div>
-                <div className="flex items-center gap-6">
+                <div className="flex items-center gap-4">
                   <div className="text-center">
-                    <div className="text-[#f97316] font-mono font-black text-4xl">
+                    <div className="text-[#f97316] font-mono font-black text-3xl">
                       {gameDetail.home_score}
                     </div>
-                    <div className="text-[#d1d5db] font-mono text-sm mt-1.5">
+                    <div className="text-[#6b7280] font-mono text-xs mt-1">
                       {gameDetail.home_team}
                     </div>
                     {gameDetail.home_win && (
-                      <div className="text-[#f97316] font-mono text-xs mt-1 font-bold tracking-widest">
+                      <div className="text-[#f97316] font-mono text-[10px] mt-0.5 font-bold">
                         WINNER
                       </div>
                     )}
                   </div>
-                  <div className="text-[#6b7280] font-mono text-3xl">–</div>
+                  <div className="text-[#2a2d36] font-mono text-2xl">–</div>
                   <div className="text-center">
-                    <div className="text-[#64b5f6] font-mono font-black text-4xl">
+                    <div className="text-[#64b5f6] font-mono font-black text-3xl">
                       {gameDetail.away_score}
                     </div>
-                    <div className="text-[#d1d5db] font-mono text-sm mt-1.5">
+                    <div className="text-[#6b7280] font-mono text-xs mt-1">
                       {gameDetail.away_team}
                     </div>
                     {!gameDetail.home_win && (
-                      <div className="text-[#64b5f6] font-mono text-xs mt-1 font-bold tracking-widest">
+                      <div className="text-[#64b5f6] font-mono text-[10px] mt-0.5 font-bold">
                         WINNER
                       </div>
                     )}
                   </div>
                 </div>
-                <div className="mt-4 text-[#9ca3af] font-mono text-sm">
+                <div className="mt-3 text-[#374151] font-mono text-xs">
                   {gameDetail.plays.length} plays total
                 </div>
               </div>
