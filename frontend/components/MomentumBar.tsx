@@ -43,10 +43,10 @@ export default function MomentumBar({ momentum, homeTeam, awayTeam }: Props) {
             </span>
           )}
           {isNeutral && (
-            <span className="text-[#374151] font-mono text-xs">BALANCED</span>
+            <span className="text-[#9ca3af] font-mono text-xs">BALANCED</span>
           )}
         </div>
-        <span className="text-[#374151] font-mono text-xs">
+        <span className="text-[#9ca3af] font-mono text-xs">
           {momentum > 0 ? `+${momentum}` : momentum}
         </span>
       </div>
@@ -86,14 +86,14 @@ export default function MomentumBar({ momentum, homeTeam, awayTeam }: Props) {
       <div className="flex justify-between mt-1.5">
         <span
           className={`font-mono text-[10px] tracking-widest ${
-            awayOnRun ? 'text-[#64b5f6] font-bold' : 'text-[#374151]'
+            awayOnRun ? 'text-[#64b5f6] font-bold' : 'text-[#9ca3af]'
           }`}
         >
           ← {awayTeam}
         </span>
         <span
           className={`font-mono text-[10px] tracking-widest ${
-            homeOnRun ? 'text-[#f97316] font-bold' : 'text-[#374151]'
+            homeOnRun ? 'text-[#f97316] font-bold' : 'text-[#9ca3af]'
           }`}
         >
           {homeTeam} →

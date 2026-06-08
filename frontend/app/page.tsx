@@ -197,13 +197,12 @@ export default function HomePage() {
   return (
     <main className="h-screen bg-[#080a0e] text-white flex flex-col overflow-hidden">
       {/* Top nav bar */}
-      <header className="border-b border-[#1e2130] px-6 py-3 flex items-center justify-between">
+      <header className="border-b border-[#1e2130] px-6 py-3 flex items-center justify-between bg-red-900">
         <div className="flex items-center gap-3">
           <div className="w-2 h-2 rounded-full bg-[#f97316] shadow-lg shadow-orange-500/50" />
-          <span className="font-mono text-sm font-bold tracking-widest text-white uppercase">
-            NBA Live Analytics
+          <span className="font-mono text-2xl md:text-3xl font-bold tracking-wide text-white uppercase">
+            NBA Game Analytics Dashboard
           </span>
-          <span className="text-[#2a2d36] font-mono text-xs">/ Historical Replay</span>
         </div>
         <div className="flex items-center gap-2">
           {gameLoading && (
@@ -212,7 +211,8 @@ export default function HomePage() {
               <span className="text-[#f97316] font-mono text-xs">Loading game…</span>
             </div>
           )}
-          <span className="text-[#374151] font-mono text-xs">
+          {/* Updated to lighter text-gray-400 and slightly larger text-sm */}
+          <span className="text-gray-400 font-mono text-sm">
             {games.length} games
           </span>
         </div>
@@ -313,11 +313,11 @@ export default function HomePage() {
  
             {/* Instructions card — shown when no game selected */}
             {!gameDetail && !gameLoading && (
-              <div className="bg-[#0f1117] border border-[#1e2130] rounded-xl p-5 flex-1">
-                <div className="text-[#374151] font-mono text-xs mb-3 tracking-widest uppercase">
+              <div className="bg-[#0f1117] border border-[#1e2130] rounded-xl p-5 flex-1 overflow-y-auto">
+                <div className="text-[#d1d5db] font-mono text-sm mb-3 tracking-widest uppercase">
                   How to use
                 </div>
-                <div className="space-y-2 text-[#4b5563] font-mono text-xs leading-relaxed">
+                <div className="space-y-2 text-[#d1d5db] font-mono text-sm leading-relaxed">
                   <div>1. Select a game from the dropdown above</div>
                   <div>2. Wait for plays + win probability to load</div>
                   <div>3. Press ▶ to watch the game replay</div>
@@ -325,7 +325,7 @@ export default function HomePage() {
                   <div>5. Change speed to 0.5x / 1x / 2x / 4x</div>
                 </div>
                 <div className="mt-4 pt-3 border-t border-[#1e2130]">
-                  <div className="text-[#2a2d36] font-mono text-[10px] leading-loose">
+                  <div className="text-[#9ca3af] font-mono text-[10px] leading-loose">
                     <div>
                       <span className="text-emerald-500">■</span> Made shot
                       &nbsp;&nbsp;
@@ -346,7 +346,7 @@ export default function HomePage() {
             {/* Game stats summary — shown when game is finished */}
             {gameDetail && isFinished && (
               <div className="bg-[#0f1117] border border-[#1e2130] rounded-xl p-5 flex-1">
-                <div className="text-[#374151] font-mono text-xs mb-3 tracking-widest uppercase">
+                <div className="text-[#9ca3af] font-mono text-xs mb-3 tracking-widest uppercase">
                   Final Result
                 </div>
                 <div className="flex items-center gap-4">
@@ -378,7 +378,7 @@ export default function HomePage() {
                     )}
                   </div>
                 </div>
-                <div className="mt-3 text-[#374151] font-mono text-xs">
+                <div className="mt-3 text-[#9ca3af] font-mono text-xs">
                   {gameDetail.plays.length} plays total
                 </div>
               </div>
