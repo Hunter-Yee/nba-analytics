@@ -13,6 +13,8 @@ interface Props {
   homeTeam: string
   awayTeam: string
   currentPlay: Play | null
+  scoreHome: number
+  scoreAway: number
   homeWin: boolean | null
   isFinished: boolean
 }
@@ -21,11 +23,11 @@ export default function Scoreboard({
   homeTeam,
   awayTeam,
   currentPlay,
+  scoreHome,
+  scoreAway,
   homeWin,
   isFinished,
 }: Props) {
-  const scoreHome = currentPlay?.score_home ?? 0
-  const scoreAway = currentPlay?.score_away ?? 0
   const period = currentPlay ? formatPeriod(currentPlay.period) : 'Q1'
   const clock = currentPlay ? parseClock(currentPlay.clock) : '12:00'
   const homeLeading = scoreHome > scoreAway

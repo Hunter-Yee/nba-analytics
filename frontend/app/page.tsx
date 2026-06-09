@@ -78,7 +78,7 @@ export default function HomePage() {
     try {
       // 1. Fetch play-by-play
       const detail = await fetchGame(gameId)
-      setGameDetail(detail)
+      // setGameDetail(detail)
  
       // 2. Build the batch prediction request from all plays
       const batchPayload = detail.plays.map((play) => ({
@@ -106,26 +106,35 @@ export default function HomePage() {
       }
  
       // 4. Merge plays + predictions into chart data
+      let lastHomeScore = 0
+      let lastAwayScore = 0
+
       const chart: ChartDataPoint[] = detail.plays.map((play, i) => {
-        const isLastPlay = i === detail.plays.length - 1;
-        
+        const isLastPlay = i === detail.plays.length - 1
+
+        // Carry forward the last known score if this play has no score data
+        if (play.score_home > 0 || play.score_away > 0) {
+          lastHomeScore = play.score_home
+          lastAwayScore = play.score_away
+        }
+
         return {
           play_index: i,
           seconds_remaining: play.seconds_remaining,
-          // Force 100% / 0% on the final play based on the actual outcome
-          home_win_probability: isLastPlay 
-            ? (detail.home_win ? 1 : 0) 
+          home_win_probability: isLastPlay
+            ? (detail.home_win ? 1 : 0)
             : (predictions[i]?.home_win_probability ?? 0.5),
-          away_win_probability: isLastPlay 
-            ? (detail.home_win ? 0 : 1) 
+          away_win_probability: isLastPlay
+            ? (detail.home_win ? 0 : 1)
             : (predictions[i]?.away_win_probability ?? 0.5),
           description: play.description,
-          score_home: play.score_home,
-          score_away: play.score_away,
+          score_home: lastHomeScore,
+          score_away: lastAwayScore,
           period: play.period,
-        };
+        }
       })
- 
+
+      setGameDetail(detail)
       setChartData(chart)
       // Surface the model error as a non-blocking warning (reuse gameError for now)
       if (probError) {
@@ -165,6 +174,10 @@ export default function HomePage() {
   const currentPlay = gameDetail?.plays[currentPlayIndex] ?? null
   const isFinished =
     gameDetail !== null && currentPlayIndex >= gameDetail.plays.length - 1
+
+  const currentScore = chartData[currentPlayIndex]
+  const displayScoreHome = currentScore?.score_home ?? 0
+  const displayScoreAway = currentScore?.score_away ?? 0
  
   // ─── Handlers ────────────────────────────────────────────────────────────────
   const handlePlayPause = () => {
@@ -195,7 +208,7 @@ export default function HomePage() {
  
   // ─── Render ──────────────────────────────────────────────────────────────────
   return (
-    <main className="h-screen bg-[#080a0e] text-white flex flex-col overflow-hidden">
+    <main className="h-screen bg-[#080a0e] text-white flex flex-col">
       {/* Top nav bar */}
       <header className="border-b border-[#1e2130] px-6 py-3 flex items-center justify-between bg-red-900">
         <div className="flex items-center gap-3">
@@ -254,6 +267,8 @@ export default function HomePage() {
               homeTeam={gameDetail?.home_team ?? '–'}
               awayTeam={gameDetail?.away_team ?? '–'}
               currentPlay={currentPlay}
+              scoreHome={displayScoreHome}
+              scoreAway={displayScoreAway}
               homeWin={gameDetail?.home_win ?? null}
               isFinished={isFinished}
             />
@@ -291,7 +306,7 @@ export default function HomePage() {
         />
  
         {/* Row 4: Play Feed + Info Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 min-h-0">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{ height: '400px' }}>
           <PlayFeed
             plays={gameDetail?.plays ?? []}
             currentPlayIndex={currentPlayIndex}
