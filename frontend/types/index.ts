@@ -21,6 +21,9 @@ export interface GameSummary {
   away_score: number
   home_win: boolean
   total_plays: number
+  season?: string
+  season_type?: string
+  game_date?: string
 }
 
 export interface GameDetail {

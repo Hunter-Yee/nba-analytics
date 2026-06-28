@@ -20,6 +20,7 @@ import {
 } from '@/lib/api'
  
 import GameSelector from '@/components/GameSelector'
+import FilterBar, { FilterState } from '@/components/FilterBar'
 import Scoreboard from '@/components/Scoreboard'
 import WinProbabilityChart from '@/components/WinProbabilityChart'
 import PlayFeed from '@/components/PlayFeed'
@@ -32,8 +33,21 @@ const BASE_INTERVAL_MS = 800
 export default function HomePage() {
   // ─── Game list ──────────────────────────────────────────────────────────────
   const [games, setGames] = useState<GameSummary[]>([])
+  const [allGames, setAllGames] = useState<GameSummary[]>([]) // For extracting options
   const [gamesLoading, setGamesLoading] = useState(true)
   const [gamesError, setGamesError] = useState<string | null>(null)
+
+  const [filters, setFilters] = useState<FilterState>({
+    season: 'All Seasons',
+    seasonType: 'All Types',
+    team: 'All Teams',
+    search: '',
+  })
+
+  // Derive dropdown options from allGames
+  const availableSeasons = Array.from(new Set(allGames.map(g => g.season).filter(Boolean) as string[])).sort().reverse()
+  const availableTeams = Array.from(new Set(allGames.flatMap(g => [g.home_team, g.away_team]))).sort()
+
  
   // ─── Selected game ──────────────────────────────────────────────────────────
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null)
@@ -50,18 +64,37 @@ export default function HomePage() {
   // Ref to hold the interval so we can clear it
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
  
-  // ─── Load game list on mount ─────────────────────────────────────────────────
+  // ─── Load game list on mount and when filters change ─────────────────────────
+  const fetchGamesData = async (currentFilters?: FilterState) => {
+    setGamesLoading(true)
+    setGamesError(null)
+    try {
+      const data = await fetchGames(currentFilters)
+      setGames(data)
+      if (!currentFilters) {
+        setAllGames(data) // Save all games once on initial load
+      }
+      setGamesLoading(false)
+    } catch (err: any) {
+      setGamesError(err.message)
+      setGamesLoading(false)
+    }
+  }
+
   useEffect(() => {
-    fetchGames()
-      .then((data) => {
-        setGames(data)
-        setGamesLoading(false)
-      })
-      .catch((err) => {
-        setGamesError(err.message)
-        setGamesLoading(false)
-      })
+    fetchGamesData() // initial load without filters
   }, [])
+
+  const handleApplyFilters = (newFilters: FilterState) => {
+    setFilters(newFilters)
+    fetchGamesData(newFilters)
+  }
+
+  const handleResetFilters = () => {
+    const defaultFilters = { season: 'All Seasons', seasonType: 'All Types', team: 'All Teams', search: '' }
+    setFilters(defaultFilters)
+    fetchGamesData(defaultFilters)
+  }
  
   // ─── Load game when selected ─────────────────────────────────────────────────
   const handleGameSelect = useCallback(async (gameId: string) => {
@@ -208,9 +241,9 @@ export default function HomePage() {
  
   // ─── Render ──────────────────────────────────────────────────────────────────
   return (
-    <main className="h-screen bg-[#080a0e] text-white flex flex-col">
+    <main className="h-screen w-screen bg-[#080a0e] text-white flex flex-col overflow-hidden">
       {/* Top nav bar */}
-      <header className="border-b border-[#1e2130] px-6 py-3 flex items-center justify-between bg-red-900">
+      <header className="border-b border-[#1e2130] px-6 py-2 flex items-center justify-between bg-red-900 shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-2 h-2 rounded-full bg-[#f97316] shadow-lg shadow-orange-500/50" />
           <span className="font-mono text-2xl md:text-3xl font-bold tracking-wide text-white uppercase">
@@ -231,7 +264,7 @@ export default function HomePage() {
         </div>
       </header>
  
-      <div className="px-4 md:px-6 py-4 flex flex-col flex-1 min-h-0 w-full max-w-screen-2xl mx-auto gap-4">
+      <div className="px-4 py-3 flex flex-col flex-1 min-h-0 w-full gap-3 overflow-y-auto">
         {/* Error states */}
         {gamesError && (
           <div className="bg-red-950/30 border border-red-900 rounded-lg px-4 py-3">
@@ -252,7 +285,16 @@ export default function HomePage() {
           </div>
         )}
  
-        {/* Row 1: Game Selector */}
+        {/* Row 1: Filter Bar */}
+        <FilterBar 
+          initialFilters={filters}
+          onApply={handleApplyFilters}
+          onReset={handleResetFilters}
+          availableSeasons={availableSeasons}
+          availableTeams={availableTeams}
+        />
+
+        {/* Row 2: Game Selector */}
         <GameSelector
           games={games}
           selectedId={selectedGameId}
@@ -283,8 +325,8 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* NEW: Replay Controls directly under the chart */}
-        <div className="py-2">
+        {/* Row 3: Replay Controls */}
+        <div className="py-1 shrink-0">
           <ReplayControls
             isPlaying={isPlaying}
             speed={speed}
@@ -298,107 +340,38 @@ export default function HomePage() {
           />
         </div>
  
-        {/* Row 3: Momentum Bar */}
-        <MomentumBar
-          momentum={currentPlay?.momentum ?? 0}
-          homeTeam={gameDetail?.home_team ?? 'HOME'}
-          awayTeam={gameDetail?.away_team ?? 'AWAY'}
-        />
- 
-        {/* Row 4: Play Feed + Info Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{ height: '400px' }}>
-          <PlayFeed
-            plays={gameDetail?.plays ?? []}
-            chartData={chartData}
-            currentPlayIndex={currentPlayIndex}
-            homeTeam={gameDetail?.home_team ?? 'HOME'}
-            awayTeam={gameDetail?.away_team ?? 'AWAY'}
-          />
-          <div className="flex flex-col gap-4">
-            {/* <ReplayControls
-              isPlaying={isPlaying}
-              speed={speed}
-              currentPlayIndex={currentPlayIndex}
-              totalPlays={gameDetail?.plays.length ?? 0}
-              onPlayPause={handlePlayPause}
-              onSpeedChange={handleSpeedChange}
-              onScrub={handleScrub}
-              onSkipToStart={handleSkipToStart}
-              onSkipToEnd={handleSkipToEnd}
-            /> */}
- 
-            {/* Instructions card — shown when no game selected */}
+        {/* Row 4: Bottom Section (3 columns) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1 min-h-0">
+          
+          {/* Left: Momentum Bar & Mini Stats */}
+          <div className="flex flex-col gap-4 overflow-y-auto pr-2">
+            <MomentumBar
+              momentum={currentPlay?.momentum ?? 0}
+              homeTeam={gameDetail?.home_team ?? 'HOME'}
+              awayTeam={gameDetail?.away_team ?? 'AWAY'}
+            />
+            {/* Mini stats placeholder */}
+          </div>
+
+          {/* Center: Team Stats Table (Empty for now) */}
+          <div className="bg-[#0f1117] border border-[#1e2130] rounded-xl p-4 overflow-y-auto">
+            <div className="text-[#9ca3af] font-mono text-xs mb-3 tracking-widest uppercase">
+              Team Stats (WIP)
+            </div>
             {!gameDetail && !gameLoading && (
-              <div className="bg-[#0f1117] border border-[#1e2130] rounded-xl p-5 flex-1 overflow-y-auto">
-                <div className="text-[#d1d5db] font-mono text-sm mb-3 tracking-widest uppercase">
-                  How to use
-                </div>
-                <div className="space-y-2 text-[#d1d5db] font-mono text-sm leading-relaxed">
-                  <div>1. Select a game from the dropdown above</div>
-                  <div>2. Wait for plays + win probability to load</div>
-                  <div>3. Press ▶ to watch the game replay</div>
-                  <div>4. Use the scrubber to jump to any moment</div>
-                  <div>5. Change speed to 0.5x / 1x / 2x / 4x</div>
-                </div>
-                <div className="mt-4 pt-3 border-t border-[#1e2130]">
-                  <div className="text-[#9ca3af] font-mono text-[10px] leading-loose">
-                    <div>
-                      <span className="text-emerald-500">■</span> Made shot
-                      &nbsp;&nbsp;
-                      <span className="text-red-500">■</span> Turnover
-                      &nbsp;&nbsp;
-                      <span className="text-yellow-500">■</span> Foul
-                    </div>
-                    <div>
-                      <span className="text-teal-400">■</span> Free throw
-                      &nbsp;&nbsp;
-                      <span className="text-purple-400">■</span> Rebound
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <div className="text-[#6b7280] font-mono text-xs">Select a game to view stats.</div>
             )}
- 
-            {/* Game stats summary — shown when game is finished */}
-            {gameDetail && isFinished && (
-              <div className="bg-[#0f1117] border border-[#1e2130] rounded-xl p-5 flex-1">
-                <div className="text-[#9ca3af] font-mono text-xs mb-3 tracking-widest uppercase">
-                  Final Result
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-center">
-                    <div className="text-[#f97316] font-mono font-black text-3xl">
-                      {gameDetail.home_score}
-                    </div>
-                    <div className="text-[#6b7280] font-mono text-xs mt-1">
-                      {gameDetail.home_team}
-                    </div>
-                    {gameDetail.home_win && (
-                      <div className="text-[#f97316] font-mono text-[10px] mt-0.5 font-bold">
-                        WINNER
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-[#2a2d36] font-mono text-2xl">–</div>
-                  <div className="text-center">
-                    <div className="text-[#64b5f6] font-mono font-black text-3xl">
-                      {gameDetail.away_score}
-                    </div>
-                    <div className="text-[#6b7280] font-mono text-xs mt-1">
-                      {gameDetail.away_team}
-                    </div>
-                    {!gameDetail.home_win && (
-                      <div className="text-[#64b5f6] font-mono text-[10px] mt-0.5 font-bold">
-                        WINNER
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="mt-3 text-[#9ca3af] font-mono text-xs">
-                  {gameDetail.plays.length} plays total
-                </div>
-              </div>
-            )}
+          </div>
+
+          {/* Right: Play Feed */}
+          <div className="overflow-hidden flex flex-col">
+            <PlayFeed
+              plays={gameDetail?.plays ?? []}
+              chartData={chartData}
+              currentPlayIndex={currentPlayIndex}
+              homeTeam={gameDetail?.home_team ?? 'HOME'}
+              awayTeam={gameDetail?.away_team ?? 'AWAY'}
+            />
           </div>
         </div>
       </div>

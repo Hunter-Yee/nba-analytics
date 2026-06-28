@@ -14,9 +14,21 @@ const BASE_URL = 'http://localhost:8000'
  
 // ─── Games ────────────────────────────────────────────────────────────────────
  
-/** Fetch the list of all 120 available games */
-export async function fetchGames(): Promise<GameSummary[]> {
-  const res = await fetch(`${BASE_URL}/games/`)
+/** Fetch the list of all available games */
+export async function fetchGames(params?: {
+  season?: string
+  seasonType?: string
+  team?: string
+  search?: string
+}): Promise<GameSummary[]> {
+  const url = new URL(`${BASE_URL}/games/`)
+  if (params) {
+    if (params.season && params.season !== 'All Seasons') url.searchParams.append('season', params.season)
+    if (params.seasonType && params.seasonType !== 'All Types') url.searchParams.append('season_type', params.seasonType)
+    if (params.team && params.team !== 'All Teams') url.searchParams.append('team', params.team)
+    if (params.search) url.searchParams.append('search', params.search)
+  }
+  const res = await fetch(url.toString())
   if (!res.ok) throw new Error(`Failed to fetch games: ${res.status}`)
   return res.json()
 }
