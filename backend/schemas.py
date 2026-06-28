@@ -26,6 +26,9 @@ class GameSummary(BaseModel):
     away_score: int
     home_win: bool
     total_plays: int
+    season: Optional[str] = None
+    season_type: Optional[str] = None
+    game_date: Optional[str] = None
 
 class GameDetailResponse(BaseModel):
     """Full game data including all plays — powers the replay system."""

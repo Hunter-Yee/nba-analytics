@@ -9,12 +9,31 @@ router = APIRouter(prefix="/games", tags=["games"])
 
 
 @router.get("/", response_model=list[GameSummary])
-def list_games(db: Session = Depends(get_db)):
+def list_games(
+    season: str = None,
+    season_type: str = None,
+    team: str = None,
+    search: str = None,
+    db: Session = Depends(get_db)
+):
     """
     Return a list of all available games from the database.
     This is extremely fast compared to reading CSVs.
     """
-    games = db.query(Game).all()
+    query = db.query(Game)
+    
+    if season:
+        query = query.filter(Game.season == season)
+    if season_type:
+        query = query.filter(Game.season_type == season_type)
+    if team and team != "All Teams":
+        query = query.filter((Game.home_team_id == team) | (Game.away_team_id == team) | (Game.home_team.has(tricode=team)) | (Game.away_team.has(tricode=team)))
+    
+    games = query.all()
+    
+    if search:
+        search_lower = search.lower()
+        games = [g for g in games if search_lower in g.home_team.tricode.lower() or search_lower in g.away_team.tricode.lower() or search_lower in (g.game_date or "").lower()]
     
     summaries = []
     for g in games:
@@ -26,6 +45,9 @@ def list_games(db: Session = Depends(get_db)):
             away_score=g.away_score,
             home_win=g.home_win,
             total_plays=g.total_plays,
+            season=g.season,
+            season_type=g.season_type,
+            game_date=g.game_date,
         ))
         
     # Sort by game_id descending (newest first)

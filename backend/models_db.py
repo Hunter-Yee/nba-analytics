@@ -24,6 +24,9 @@ class Game(Base):
     away_score = Column(Integer)
     home_win = Column(Boolean)
     total_plays = Column(Integer)
+    season = Column(String, index=True)
+    season_type = Column(String, index=True)
+    game_date = Column(String)
     
     # Relationships
     home_team = relationship("Team", foreign_keys=[home_team_id], back_populates="home_games")
