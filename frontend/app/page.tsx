@@ -309,6 +309,7 @@ export default function HomePage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{ height: '400px' }}>
           <PlayFeed
             plays={gameDetail?.plays ?? []}
+            chartData={chartData}
             currentPlayIndex={currentPlayIndex}
             homeTeam={gameDetail?.home_team ?? 'HOME'}
             awayTeam={gameDetail?.away_team ?? 'AWAY'}

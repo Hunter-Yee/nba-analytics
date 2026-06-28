@@ -1,5 +1,6 @@
 # data/features.py
 import pandas as pd
+import numpy as np
 import re
 
 def parse_clock(clock_str: str, period: int) -> float:
@@ -70,7 +71,7 @@ def compute_momentum(df: pd.DataFrame, window_seconds: float = 120.0) -> pd.Seri
 
         home_pts = window_plays['home_scored'].sum()
         away_pts = window_plays['away_scored'].sum()
-        momentum.append(int(home_pts - away_pts))
+        momentum.append(int(np.clip(home_pts - away_pts, -8, 8)))
 
     return pd.Series(momentum, index=df.index)
 

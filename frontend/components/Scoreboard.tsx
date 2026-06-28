@@ -108,7 +108,7 @@ export default function Scoreboard({
       {/* Score diff indicator */}
       {currentPlay && !isFinished && (
         <div className="mt-4 text-center">
-          {currentPlay.score_diff === 0 ? (
+          {scoreHome === scoreAway ?  (
             <span className="text-[#4b5563] font-mono text-xs tracking-widest">TIED</span>
           ) : (
             <span
@@ -116,8 +116,8 @@ export default function Scoreboard({
                 currentPlay.score_diff > 0 ? 'text-[#f97316]' : 'text-[#64b5f6]'
               }`}
             >
-              {currentPlay.score_diff > 0 ? homeTeam : awayTeam} +
-              {Math.abs(currentPlay.score_diff)}
+              {scoreHome > scoreAway ? homeTeam : awayTeam} +
+              {Math.abs(scoreHome - scoreAway)}
             </span>
           )}
         </div>

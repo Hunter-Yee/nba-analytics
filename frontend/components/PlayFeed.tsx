@@ -1,5 +1,5 @@
 'use client'
- 
+
 /**
  * PlayFeed
  * Scrolling log of play descriptions.
@@ -7,11 +7,12 @@
  */
  
 import { useEffect, useRef } from 'react'
-import type { Play } from '@/types'
+import type { Play, ChartDataPoint } from '@/types'
 import { formatPeriod } from '@/lib/api'
  
 interface Props {
   plays: Play[]
+  chartData: ChartDataPoint[]
   currentPlayIndex: number
   homeTeam: string
   awayTeam: string
@@ -52,6 +53,7 @@ function getPlayStyle(actionType: string | null) {
  
 export default function PlayFeed({
   plays,
+  chartData,
   currentPlayIndex,
   homeTeam,
   awayTeam,
@@ -178,11 +180,11 @@ export default function PlayFeed({
                   {isCurrent && (
                     <div className="flex items-center gap-1.5 mt-1.5">
                       <span className="text-[#f97316] font-mono text-xs font-bold">
-                        {homeTeam} {play.score_home}
+                        {homeTeam} {chartData[currentPlayIndex]?.score_home ?? play.score_home}
                       </span>
                       <span className="text-[#6b7280] font-mono text-xs">–</span>
                       <span className="text-[#64b5f6] font-mono text-xs font-bold">
-                        {play.score_away} {awayTeam}
+                        {chartData[currentPlayIndex]?.score_away ?? play.score_away} {awayTeam}
                       </span>
                     </div>
                   )}
