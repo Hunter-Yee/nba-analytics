@@ -85,11 +85,18 @@ def engineer_features(pbp_df: pd.DataFrame, home_team_id: str) -> pd.DataFrame:
     """
     df = pbp_df.copy()
 
-    # --- 1. Filter to plays that actually change game state ---
-    # We only want rows where something scoring-relevant happened
-    # or where we have a valid score to work with
-    df = df[df['scoreHome'].notna() & df['scoreAway'].notna()]
-    df = df[df['scoreHome'] != '']
+    # --- 1. Fill missing scores so we don't lose non-scoring plays (rebounds, turnovers, etc) ---
+    # Convert empty strings or NaN to actual NaN, then forward fill
+    df['scoreHome_num'] = pd.to_numeric(df['scoreHome'], errors='coerce')
+    df['scoreAway_num'] = pd.to_numeric(df['scoreAway'], errors='coerce')
+    
+    # We shouldn't drop rows with NaN scores because early plays might not have scores yet (0-0)
+    df['scoreHome_num'] = df['scoreHome_num'].ffill().fillna(0)
+    df['scoreAway_num'] = df['scoreAway_num'].ffill().fillna(0)
+    
+    # Update the string columns just in case
+    df['scoreHome'] = df['scoreHome_num'].astype(int).astype(str)
+    df['scoreAway'] = df['scoreAway_num'].astype(int).astype(str)
 
     # --- 2. Time remaining (our most important feature) ---
     df['seconds_remaining'] = df.apply(
@@ -97,16 +104,9 @@ def engineer_features(pbp_df: pd.DataFrame, home_team_id: str) -> pd.DataFrame:
     )
 
     # --- 3. Score differential (from home team's perspective) ---
-    df['score_diff'] = df.apply(
-        lambda row: compute_score_diff(row, home_team_id), axis=1
-    )
+    df['score_diff'] = df['scoreHome_num'] - df['scoreAway_num']
 
     # --- 4. Points scored per play ---
-    # pointsTotal in V3 is the player's CUMULATIVE total — not useful.
-    # Instead, compute how much the score CHANGED on each play.
-    df['scoreHome_num'] = pd.to_numeric(df['scoreHome'], errors='coerce').ffill().fillna(0)
-    df['scoreAway_num'] = pd.to_numeric(df['scoreAway'], errors='coerce').ffill().fillna(0)
-
     # Shift by 1 to get the previous row's score, then subtract
     df['home_scored'] = (df['scoreHome_num'] - df['scoreHome_num'].shift(1, fill_value=0)).clip(lower=0)
     df['away_scored'] = (df['scoreAway_num'] - df['scoreAway_num'].shift(1, fill_value=0)).clip(lower=0)

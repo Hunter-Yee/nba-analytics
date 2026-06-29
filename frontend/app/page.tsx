@@ -26,6 +26,7 @@ import WinProbabilityChart from '@/components/WinProbabilityChart'
 import PlayFeed from '@/components/PlayFeed'
 import MomentumBar from '@/components/MomentumBar'
 import ReplayControls from '@/components/ReplayControls'
+import TeamStatsTable from '@/components/TeamStatsTable'
  
 // How many milliseconds between each play advance (at 1x speed)
 const BASE_INTERVAL_MS = 800
@@ -353,14 +354,14 @@ export default function HomePage() {
             {/* Mini stats placeholder */}
           </div>
 
-          {/* Center: Team Stats Table (Empty for now) */}
-          <div className="bg-[#0f1117] border border-[#1e2130] rounded-xl p-4 overflow-y-auto">
-            <div className="text-[#9ca3af] font-mono text-xs mb-3 tracking-widest uppercase">
-              Team Stats (WIP)
-            </div>
-            {!gameDetail && !gameLoading && (
-              <div className="text-[#6b7280] font-mono text-xs">Select a game to view stats.</div>
-            )}
+          {/* Center: Team Stats Table */}
+          <div className="overflow-hidden flex flex-col">
+            <TeamStatsTable
+              plays={gameDetail?.plays ?? []}
+              currentPlayIndex={currentPlayIndex}
+              homeTeam={gameDetail?.home_team ?? 'HOME'}
+              awayTeam={gameDetail?.away_team ?? 'AWAY'}
+            />
           </div>
 
           {/* Right: Play Feed */}
