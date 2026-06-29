@@ -37,7 +37,7 @@ export default function ReplayControls({
     totalPlays > 0 ? ((currentPlayIndex + 1) / totalPlays) * 100 : 0
 
   return (
-    <div className="bg-[#0f1117] border border-[#2a2d36] rounded-xl px-5 py-4">
+    <div className="bg-[#0f1117] border border-[#2a2d36] rounded-xl px-5 py-2">
       {/* Controls row */}
       <div className="flex items-center gap-4">
         {/* Skip to start */}
@@ -59,7 +59,7 @@ export default function ReplayControls({
           onClick={onPlayPause}
           disabled={totalPlays === 0}
           className="
-            w-10 h-10 rounded-full flex items-center justify-center
+            w-8 h-8 rounded-full flex items-center justify-center
             bg-[#f97316] hover:bg-[#ea6e0b] active:scale-95
             transition-all duration-150
             disabled:opacity-30 disabled:cursor-not-allowed
@@ -67,9 +67,9 @@ export default function ReplayControls({
           "
         >
           {isPlaying ? (
-            <Pause size={18} fill="white" color="white" />
+            <Pause size={14} fill="white" color="white" />
           ) : (
-            <Play size={18} fill="white" color="white" className="ml-0.5" />
+            <Play size={14} fill="white" color="white" className="ml-0.5" />
           )}
         </button>
 
@@ -118,7 +118,7 @@ export default function ReplayControls({
       </div>
 
       {/* Scrubber */}
-      <div className="mt-4">
+      <div className="mt-2">
         <input
           type="range"
           min={0}

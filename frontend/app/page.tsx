@@ -19,7 +19,7 @@ import {
   fetchWinProbabilityBatch,
 } from '@/lib/api'
  
-import GameSelector from '@/components/GameSelector'
+import GameHeader from '@/components/GameHeader'
 import FilterBar, { FilterState } from '@/components/FilterBar'
 import Scoreboard from '@/components/Scoreboard'
 import WinProbabilityChart from '@/components/WinProbabilityChart'
@@ -295,8 +295,8 @@ export default function HomePage() {
           availableTeams={availableTeams}
         />
 
-        {/* Row 2: Game Selector */}
-        <GameSelector
+        {/* Row 2: Game Header */}
+        <GameHeader
           games={games}
           selectedId={selectedGameId}
           onSelect={handleGameSelect}
@@ -304,8 +304,8 @@ export default function HomePage() {
         />
  
         {/* Row 2: Scoreboard + Win Probability Chart */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4" style={{ minHeight: 220 }}>
-          <div className="md:col-span-1">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-4" style={{ minHeight: 280 }}>
+          <div className="md:col-span-3 flex flex-col">
             <Scoreboard
               homeTeam={gameDetail?.home_team ?? '–'}
               awayTeam={gameDetail?.away_team ?? '–'}
@@ -316,7 +316,7 @@ export default function HomePage() {
               isFinished={isFinished}
             />
           </div>
-          <div className="md:col-span-2" style={{ minHeight: 220 }}>
+          <div className="md:col-span-9 flex flex-col" style={{ minHeight: 280 }}>
             <WinProbabilityChart
               data={chartData}
               currentPlayIndex={currentPlayIndex}

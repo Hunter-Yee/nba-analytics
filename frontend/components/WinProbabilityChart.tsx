@@ -16,8 +16,6 @@ import {
   ReferenceLine,
   Tooltip,
   ResponsiveContainer,
-  Area,
-  AreaChart,
 } from 'recharts'
 import type { ChartDataPoint } from '@/types'
 import { formatPeriod } from '@/lib/api'
@@ -50,15 +48,19 @@ function CustomTooltip({ active, payload }: any) {
       <div className="flex gap-3 mt-1">
         <div>
           <div className="text-[#f97316] font-mono text-xs font-bold">{homeProb}%</div>
-          <div className="text-[#9ca3af] font-mono text-[10px]">HOME WIN</div>
+          <div className="text-[#9ca3af] font-mono text-[10px]">{d.home_team_tricode ?? 'HOME'} WIN</div>
         </div>
         <div>
           <div className="text-[#64b5f6] font-mono text-xs font-bold">{awayProb}%</div>
-          <div className="text-[#9ca3af] font-mono text-[10px]">AWAY WIN</div>
+          <div className="text-[#9ca3af] font-mono text-[10px]">{d.away_team_tricode ?? 'AWAY'} WIN</div>
         </div>
       </div>
     </div>
   )
+}
+
+function getFormattedProb(prob: number) {
+  return `${Math.round(prob * 100)}%`
 }
  
 export default function WinProbabilityChart({
@@ -67,8 +69,13 @@ export default function WinProbabilityChart({
   homeTeam,
   awayTeam,
 }: Props) {
-  // Only show data up to the current play during replay
-  const visibleData = data.slice(0, currentPlayIndex + 1)
+  const chartData = data.map((d, i) => ({
+    ...d,
+    home_win_probability: i <= currentPlayIndex ? d.home_win_probability : null,
+    away_win_probability: i <= currentPlayIndex ? (d.away_win_probability ?? (1 - d.home_win_probability)) : null,
+    home_team_tricode: homeTeam,
+    away_team_tricode: awayTeam,
+  }))
  
   if (data.length === 0) {
     const isGameSelected = homeTeam !== 'HOME' && homeTeam !== '–'
@@ -89,16 +96,36 @@ export default function WinProbabilityChart({
   }
  
   // Determine current win probability to color the chart
-  const current = visibleData[visibleData.length - 1]
+  const current = data[currentPlayIndex]
   const homeLeading = current ? current.home_win_probability > 0.5 : true
  
   return (
     <div className="bg-[#0f1117] border border-[#2a2d36] rounded-xl p-5 h-full flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-[#9ca3af] font-mono text-xs tracking-widest uppercase font-semibold">
-          Win Probability
-        </span>
+      {/* Header & Current probability inline */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-6">
+          <span className="text-[#9ca3af] font-mono text-xs tracking-widest uppercase font-semibold">
+            Win Probability
+          </span>
+          {current && (
+            <div className="flex items-center gap-3">
+              <div>
+                <span className={`font-mono font-black text-xl ${homeLeading ? 'text-[#f97316]' : 'text-[#6b7280]'}`}>
+                  {getFormattedProb(current.home_win_probability)}
+                </span>
+                <span className="text-[#9ca3af] font-mono text-[10px] ml-1">{homeTeam}</span>
+              </div>
+              <span className="text-[#4b5563] font-mono">|</span>
+              <div>
+                <span className={`font-mono font-black text-xl ${!homeLeading ? 'text-[#64b5f6]' : 'text-[#6b7280]'}`}>
+                  {getFormattedProb(1 - current.home_win_probability)}
+                </span>
+                <span className="text-[#9ca3af] font-mono text-[10px] ml-1">{awayTeam}</span>
+              </div>
+            </div>
+          )}
+        </div>
+        
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-[#f97316]" />
@@ -111,79 +138,58 @@ export default function WinProbabilityChart({
         </div>
       </div>
  
-      {/* Current probability display */}
-      {current && (
-        <div className="flex items-center gap-4 mb-3">
-          <div>
-            <span
-              className={`font-mono font-black text-2xl ${
-                homeLeading ? 'text-[#f97316]' : 'text-[#6b7280]'
-              }`}
-            >
-              {Math.round(current.home_win_probability * 100)}%
-            </span>
-            <span className="text-[#9ca3af] font-mono text-xs ml-1">{homeTeam}</span>
-          </div>
-          <span className="text-[#4b5563] font-mono">|</span>
-          <div>
-            <span
-              className={`font-mono font-black text-2xl ${
-                !homeLeading ? 'text-[#64b5f6]' : 'text-[#6b7280]'
-              }`}
-            >
-              {Math.round((1 - current.home_win_probability) * 100)}%
-            </span>
-            <span className="text-[#9ca3af] font-mono text-xs ml-1">{awayTeam}</span>
-          </div>
-        </div>
-      )}
- 
       {/* Chart */}
       <div className="flex-1 min-h-0">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart
-            data={visibleData}
-            margin={{ top: 4, right: 4, left: -20, bottom: 0 }}
+          <LineChart
+            data={chartData}
+            margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
           >
-            <defs>
-              <linearGradient id="homeGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#f97316" stopOpacity={0.25} />
-                <stop offset="95%" stopColor="#f97316" stopOpacity={0.02} />
-              </linearGradient>
-            </defs>
- 
             {/* Reference lines */}
-            <ReferenceLine y={0.75} stroke="#2a2d36" strokeDasharray="3 3" />
-            <ReferenceLine y={0.5} stroke="#374151" strokeWidth={1} />
-            <ReferenceLine y={0.25} stroke="#2a2d36" strokeDasharray="3 3" />
+            <ReferenceLine y={1} stroke="#2a2d36" strokeDasharray="3 3" />
+            <ReferenceLine y={0.5} stroke="#374151" strokeDasharray="3 3" />
+            <ReferenceLine y={0} stroke="#2a2d36" strokeDasharray="3 3" />
  
             <XAxis
               dataKey="play_index"
+              domain={[0, data.length - 1]}
+              type="number"
               tick={false}
-              axisLine={{ stroke: '#1e2130' }}
+              axisLine={false}
               tickLine={false}
             />
             <YAxis
               domain={[0, 1]}
               tickFormatter={(v) => `${Math.round(v * 100)}%`}
-              tick={{ fill: '#6b7280', fontSize: 11, fontFamily: 'monospace' }}
+              tick={{ fill: '#6b7280', fontSize: 10, fontFamily: 'monospace' }}
               axisLine={false}
               tickLine={false}
-              ticks={[0, 0.25, 0.5, 0.75, 1]}
+              ticks={[0, 0.5, 1]}
             />
             <Tooltip content={<CustomTooltip />} />
  
-            <Area
+            <Line
               type="monotone"
               dataKey="home_win_probability"
               stroke="#f97316"
               strokeWidth={2}
-              fill="url(#homeGradient)"
               dot={false}
               activeDot={{ r: 4, fill: '#f97316', stroke: '#0f1117', strokeWidth: 2 }}
               isAnimationActive={false}
+              connectNulls={false}
             />
-          </AreaChart>
+            
+            <Line
+              type="monotone"
+              dataKey="away_win_probability"
+              stroke="#64b5f6"
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4, fill: '#64b5f6', stroke: '#0f1117', strokeWidth: 2 }}
+              isAnimationActive={false}
+              connectNulls={false}
+            />
+          </LineChart>
         </ResponsiveContainer>
       </div>
  
