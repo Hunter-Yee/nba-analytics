@@ -102,20 +102,20 @@ export default function TeamStatsTable({ plays, currentPlayIndex, homeTeam, away
   return (
     <div className="bg-[#0f1117] border border-[#1e2130] rounded-xl flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-[#2a2d3e] flex-shrink-0 flex items-center justify-between">
-        <span className="text-[#9ca3af] font-mono text-xs tracking-widest uppercase font-semibold">
+      <div className="px-3 py-1.5 border-b border-[#2a2d3e] flex-shrink-0 flex items-center justify-between">
+        <span className="text-[#9ca3af] font-mono text-[10px] tracking-widest uppercase font-semibold">
           Team Stats
         </span>
       </div>
-
+ 
       {/* Table Body */}
-      <div className="flex-1 overflow-y-auto px-4 py-3">
-        <div className="flex justify-between items-center mb-3">
+      <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col">
+        <div className="flex justify-between items-center mb-2 flex-shrink-0">
           <span className="text-[#f97316] font-mono font-bold text-sm">{homeTeam}</span>
           <span className="text-[#64b5f6] font-mono font-bold text-sm">{awayTeam}</span>
         </div>
 
-        <div className="space-y-3">
+        <div className="flex-1 flex flex-col justify-evenly min-h-0">
           {stats.map((stat, idx) => (
             <div key={idx} className="flex justify-between items-center text-xs font-mono">
               <span className="text-gray-300 w-1/3 text-left">{stat.homeVal}</span>
