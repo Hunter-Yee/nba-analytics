@@ -7,7 +7,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Default to the docker-compose credentials if not set
+# Set DATABASE_URL in Render to your Supabase connection string.
+# Default fallback is the local docker-compose postgres credentials.
 SQLALCHEMY_DATABASE_URL = os.getenv(
     "DATABASE_URL", 
     "postgresql://user:password@127.0.0.1:5433/nba_analytics"

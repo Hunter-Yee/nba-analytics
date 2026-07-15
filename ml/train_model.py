@@ -171,8 +171,6 @@ def train_and_evaluate(X, y, feature_cols):
         print(f"  Predicted {pred:.2f} → Actual {actual:.2f}  {bar}")
 
     # --- Save the best model ---
-    os.makedirs("../ml", exist_ok=True)
-
     # XGBoost is almost always better — save it as the primary model
     # We save both the model AND the scaler (needed for LR if you switch)
     model_data = {
@@ -184,10 +182,11 @@ def train_and_evaluate(X, y, feature_cols):
         'lr_metrics':  {'log_loss': lr_logloss,  'brier': lr_brier,  'auc': lr_auc},
     }
 
-    with open("../ml/win_probability_model.pkl", "wb") as f:
+    model_path = os.path.join(os.path.dirname(__file__), "win_probability_model.pkl")
+    with open(model_path, "wb") as f:
         pickle.dump(model_data, f)
 
-    print(f"\nModel saved to ml/win_probability_model.pkl")
+    print(f"\nModel saved to {model_path}")
     return model_data
 
 

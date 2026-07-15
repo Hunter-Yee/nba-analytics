@@ -12,5 +12,4 @@ node_modules/
 
 # Data
 *.csv
-*.pkl
 data/raw/

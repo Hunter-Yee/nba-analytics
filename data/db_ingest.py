@@ -7,8 +7,9 @@ from nba_api.stats.endpoints import boxscoresummaryv2
 from sqlalchemy.orm import Session
 from sqlalchemy.orm import Session
 
-# Add backend to sys.path to import db models
+# Add backend and ml to sys.path to import db models and features
 sys.path.append(os.path.join(os.path.dirname(__file__), "../backend"))
+sys.path.append(os.path.join(os.path.dirname(__file__), "../ml"))
 from database import SessionLocal
 from models_db import Team, Game, Play
 from features import engineer_features

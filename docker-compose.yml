@@ -1,3 +1,5 @@
+# Note: This docker-compose file is preserved to demonstrate local PostgreSQL database setup.
+# In production, the app connects to a Supabase-hosted database.
 version: '3.8'
 
 services:
