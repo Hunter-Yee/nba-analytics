@@ -45,6 +45,8 @@ export interface ChartDataPoint {
   score_home: number
   score_away: number
   period: number
+  home_team_tricode?: string
+  away_team_tricode?: string
 }
 
 export interface WinProbabilityBatchRequest {
