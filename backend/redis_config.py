@@ -7,7 +7,9 @@ from fastapi_cache.backends.redis import RedisBackend
 
 logger = logging.getLogger("nba_analytics.redis")
 
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
+raw_redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
+REDIS_URL = raw_redis_url.strip('\'" \t\n\r')
+
 
 async def init_redis_cache():
     """
