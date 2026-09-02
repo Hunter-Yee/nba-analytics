@@ -33,4 +33,6 @@ urllib3==2.7.0
 uvicorn==0.47.0
 xgboost==3.2.0
 fastapi-cache2[redis]
+jinja2
+
 
