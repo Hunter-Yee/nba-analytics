@@ -1,6 +1,7 @@
 # backend/routers/games.py
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
+from fastapi_cache.decorator import cache
 from schemas import GameSummary, GameDetailResponse, Play as PlaySchema
 from database import get_db
 from models_db import Game, Play, Team
@@ -9,7 +10,8 @@ router = APIRouter(prefix="/games", tags=["games"])
 
 
 @router.get("/", response_model=list[GameSummary])
-def list_games(
+@cache(expire=3600)
+async def list_games(
     season: str = None,
     season_type: str = None,
     team: str = None,
@@ -55,7 +57,9 @@ def list_games(
 
 
 @router.get("/{game_id}", response_model=GameDetailResponse)
-def get_game(game_id: str, db: Session = Depends(get_db)):
+@cache(expire=86400)
+async def get_game(game_id: str, db: Session = Depends(get_db)):
+
     """
     Return full play-by-play data for a single game from the database.
     """
