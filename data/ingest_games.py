@@ -1,9 +1,10 @@
 # data/ingest_games.py
+import argparse
+import os
+import time
+import pandas as pd
 from nba_api.stats.endpoints import playbyplayv3, leaguegamefinder
 from nba_api.stats.static import teams
-import pandas as pd
-import time
-import os
 
 def get_team_id(team_abbreviation: str) -> str:
     """
@@ -14,78 +15,106 @@ def get_team_id(team_abbreviation: str) -> str:
     return team["id"]
 
 
-def fetch_games_for_team(team_id: str, season: str = "1997-98") -> pd.DataFrame:
+def fetch_all_season_games(season: str = "2025-26", playoffs_only: bool = False) -> pd.DataFrame:
     """
-    Pull all games for a team in a given season, e.g. '1997-98'
+    Fetch game schedule for a given NBA season.
+    If playoffs_only=True, fetches Playoffs and Play-In Tournament games.
+    Otherwise fetches Regular Season + Playoffs + Play-In.
     """
-    finder = leaguegamefinder.LeagueGameFinder(
-        team_id_nullable=team_id,
-        season_nullable=season,
-        season_type_nullable="Regular Season"
-    )
-    games = finder.get_data_frames()[0]
-    return games
+    season_types = ["Playoffs", "PlayIn"] if playoffs_only else ["Regular Season", "Playoffs", "PlayIn"]
+    
+    dfs = []
+    for stype in season_types:
+        try:
+            print(f"Fetching game schedule for {season} ({stype})...")
+            finder = leaguegamefinder.LeagueGameFinder(
+                season_nullable=season,
+                season_type_nullable=stype,
+                league_id_nullable="00"  # NBA League ID
+            )
+            df = finder.get_data_frames()[0]
+            if not df.empty:
+                dfs.append(df)
+            time.sleep(0.8)
+        except Exception as e:
+            print(f"Warning: Could not fetch {stype} list for {season}: {e}")
+            
+    if not dfs:
+        return pd.DataFrame()
+        
+    combined = pd.concat(dfs, ignore_index=True)
+    # Deduplicate by GAME_ID (LeagueGameFinder returns 2 rows per game):
+    unique_games = combined.drop_duplicates(subset=["GAME_ID"]).copy()
+    return unique_games
 
 
 def fetch_play_by_play(game_id: str) -> pd.DataFrame:
     """
     Pull full play-by-play data for a single game
-    game_id is always a 10-digit string
     """
     pbp = playbyplayv3.PlayByPlayV3(game_id=game_id)
     df = pbp.get_data_frames()[0]
     return df
 
 
-def ingest_season_batch(team_abbreviation: str, season: str, max_games: int = 30):
+def ingest_full_season(season: str, playoffs_only: bool = False, max_games: int = None):
     """
-    Pull play-by-play for up to `max_games` games from one team's season.
-    Saves each game as a CSV in data/raw/.
+    Ingest games for an NBA season into data/raw/ CSV files.
     """
-    team_id = get_team_id(team_abbreviation)
-    games = fetch_games_for_team(team_id, season)
+    raw_dir = os.path.join(os.path.dirname(__file__), "raw")
+    os.makedirs(raw_dir, exist_ok=True)
+
+    games = fetch_all_season_games(season=season, playoffs_only=playoffs_only)
+    total_games = len(games)
     
-    print(f"Found {len(games)} games for {team_abbreviation} {season}")
-    print(f"Ingesting up to {max_games} games...\n")
+    type_desc = "Playoffs & Play-In" if playoffs_only else "Regular Season + Playoffs"
+    print(f"Found {total_games} total unique games ({type_desc}) for season {season}.")
+
+    if total_games == 0:
+        print(f"No games found for season {season}. Check the season format (e.g., '2025-26').")
+        return
+
+    if max_games:
+        games = games.head(max_games)
+        print(f"Limiting to first {max_games} games...")
 
     success = 0
-    for i, row in games.head(max_games).iterrows():
-        game_id = str(row['GAME_ID'])
-        out_path = f"data/raw/pbp_{game_id}.csv"
+    skipped = 0
 
-        # Skip if already downloaded
+    for i, (_, row) in enumerate(games.iterrows(), start=1):
+        game_id = str(row['GAME_ID'])
+        out_path = os.path.join(raw_dir, f"pbp_{game_id}.csv")
+
         if os.path.exists(out_path):
-            print(f"  [{i+1}] Already have {game_id}, skipping")
+            skipped += 1
             continue
 
         try:
-            print(f"  [{i+1}] Fetching {game_id} — {row['MATCHUP']} {row['GAME_DATE']}...")
+            matchup = row.get('MATCHUP', 'Game')
+            gdate = row.get('GAME_DATE', '')
+            print(f"  [{i}/{len(games)}] Fetching {game_id} — {matchup} ({gdate})...")
             pbp = fetch_play_by_play(game_id)
             pbp.to_csv(out_path, index=False)
             success += 1
             print(f"         Saved {len(pbp)} plays")
         except Exception as e:
-            print(f"         Failed: {e}")
+            print(f"         Failed {game_id}: {e}")
 
-        time.sleep(0.8)  # stay under rate limit
+        time.sleep(0.8)  # NBA API rate limit protection
 
-    print(f"\nDone. {success} new games saved to data/raw/")
+    print(f"\nDone! Ingested {success} new games ({skipped} skipped as already existing).")
 
 
 if __name__ == "__main__":
-    os.makedirs("data/raw", exist_ok=True)
+    parser = argparse.ArgumentParser(description="Ingest NBA games and play-by-play data.")
+    parser.add_argument("--season", type=str, default="2025-26", help="NBA Season in YYYY-YY format, e.g. 2025-26")
+    parser.add_argument("--playoffs-only", action="store_true", help="Ingest only Playoffs & Play-In games")
+    parser.add_argument("--max-games", type=int, default=None, help="Limit number of games to download")
+    args = parser.parse_args()
 
-    # Pull 30 games each from a few different teams and seasons
-    # This gives us variety — different eras, play styles, outcomes
-    batches = [
-        ("CHI", "1997-98", 30),   # Jordan's last Bulls championship season
-        ("LAL", "2000-01", 30),   # Shaq/Kobe Lakers
-        ("GSW", "2015-16", 30),   # 73-win Warriors season
-        ("CLE", "2015-16", 30),   # LeBron's Cavs — same season, different team
-    ]
+    print(f"\n{'='*50}")
+    desc = "Playoffs & Play-In" if args.playoffs_only else "Full Season (Regular Season + Playoffs)"
+    print(f"Ingesting {desc}: {args.season}")
+    print(f"{'='*50}\n")
 
-    for team, season, max_g in batches:
-        print(f"\n{'='*50}")
-        print(f"Ingesting {team} {season}")
-        print(f"{'='*50}")
-        ingest_season_batch(team, season, max_games=max_g)
+    ingest_full_season(season=args.season, playoffs_only=args.playoffs_only, max_games=args.max_games)

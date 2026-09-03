@@ -45,18 +45,9 @@ def ingest_csvs_to_db():
         start_year = 2000 + year_suffix if year_suffix < 90 else 1900 + year_suffix
         season = f"{start_year}-{str(start_year+1)[-2:]}"
         
-        # Fetch date from NBA API
+        # Set game_date (bypassing slow external network call during DB bulk insert)
         game_date = None
-        try:
-            summary = boxscoresummaryv2.BoxScoreSummaryV2(game_id=game_id)
-            df_sum = summary.game_summary.get_data_frame()
-            if not df_sum.empty:
-                raw_date = df_sum['GAME_DATE_EST'].iloc[0] # e.g. 2001-02-21T00:00:00
-                game_date = raw_date.split('T')[0]
-            time.sleep(0.6) # rate limit
-        except Exception as e:
-            print(f"Warning: Could not fetch date for {game_id}: {repr(e)}")
-            time.sleep(1)
+
 
         # If it exists but was missing metadata, just update it and continue
         if existing:
