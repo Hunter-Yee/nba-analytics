@@ -27,6 +27,8 @@ import PlayFeed from '@/components/PlayFeed'
 import MomentumBar from '@/components/MomentumBar'
 import ReplayControls from '@/components/ReplayControls'
 import TeamStatsTable from '@/components/TeamStatsTable'
+import FreeTierInfoModal from '@/components/FreeTierInfoModal'
+import { Info } from 'lucide-react'
  
 // How many milliseconds between each play advance (at 1x speed)
 const BASE_INTERVAL_MS = 800
@@ -61,6 +63,9 @@ export default function HomePage() {
   const [currentPlayIndex, setCurrentPlayIndex] = useState(0)
   const [isPlaying, setIsPlaying] = useState(false)
   const [speed, setSpeed] = useState(1)
+
+  // ─── Free Tier Info Modal ───────────────────────────────────────────────────
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false)
  
   // Ref to hold the interval so we can clear it
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -250,6 +255,15 @@ export default function HomePage() {
           <span className="font-mono text-2xl md:text-3xl font-bold tracking-wide text-white uppercase">
             NBA Game Analytics Dashboard
           </span>
+          <button
+            onClick={() => setIsInfoModalOpen(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono rounded-full bg-red-950/80 hover:bg-red-800 text-orange-200 border border-orange-500/40 hover:border-orange-400 transition-all cursor-pointer shadow-sm hover:scale-105 active:scale-95 ml-1"
+            title="About this app, tech stack & hosting info"
+            aria-label="About this app, tech stack & hosting info"
+          >
+            <Info className="w-4 h-4 text-[#f97316]" />
+            <span className="hidden sm:inline font-semibold tracking-wider uppercase text-[11px]">About / Info</span>
+          </button>
         </div>
         <div className="flex items-center gap-2">
           {gameLoading && (
@@ -378,6 +392,11 @@ export default function HomePage() {
           </div>
         </div>
       </div>
+
+      <FreeTierInfoModal
+        isOpen={isInfoModalOpen}
+        onClose={() => setIsInfoModalOpen(false)}
+      />
     </main>
   )
 }
