@@ -39,7 +39,7 @@ Here is the exact data & inference lifecycle:
        ▼
 [Next.js Frontend (Vercel)] ──▶ GET /games/{id} ──▶ [FastAPI (Render)]
                                                          │
-                                             Check Redis Cache
+                                             Check Upstash Redis Cache
                                               ├── HIT: Return cached plays
                                               └── MISS: Query Supabase Postgres
        │
@@ -63,7 +63,7 @@ Here is the exact data & inference lifecycle:
 
 1. **Database Layer (Supabase PostgreSQL)**: Stores structured historical play-by-play states (action number, clock, team tricode, scores, descriptions, and calculated momentum metrics). It **does not** store static win probabilities.
 2. **In-Memory ML Inference (FastAPI)**: At server startup, the serialized XGBoost model (`.pkl`) is loaded directly into backend memory. When a game is loaded, the client dispatches a batch request to `/predict/win-probability/batch`. The model processes all game states simultaneously using vectorized NumPy arrays, providing sub-millisecond per-play inference.
-3. **High-Performance Caching (Redis)**: Game metadata (`/games/`) and individual game play-by-play responses (`/games/{id}`) are cached using `fastapi-cache2` backed by Redis. This drastically cuts down cold-read latency and spares Supabase query quotas.
+3. **High-Performance Caching (Upstash Redis)**: Game metadata (`/games/`) and individual game play-by-play responses (`/games/{id}`) are cached using `fastapi-cache2` connected to a serverless Upstash Redis instance. This drastically cuts down cold-read latency and spares Supabase query quotas.
 
 ---
 
@@ -79,7 +79,7 @@ Here is the exact data & inference lifecycle:
 - **API Framework**: [FastAPI](https://fastapi.tiangolo.com/) (Python)
 - **ML Engine**: [XGBoost](https://xgboost.readthedocs.io/), Scikit-Learn, NumPy, Pandas
 - **ORM & Migrations**: SQLAlchemy & Alembic
-- **Caching**: Redis via `fastapi-cache2` (asynchronous caching with graceful fallback resilience)
+- **Caching**: [Upstash Redis](https://upstash.com/) via `fastapi-cache2` (serverless Redis with graceful fallback resilience)
 - **Hosting**: [Render](https://render.com/)
 
 ### **Database & Data Pipeline**
